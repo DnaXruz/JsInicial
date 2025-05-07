@@ -1,25 +1,580 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sitio de juegos</title>
-    <link rel="stylesheet" href="./css/style.css">
+    <title>Solver CPM - Teoría de Redes</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
-<body>
-    <h1>Sitio de desarrollo web FCA</h1>
-    
-    <label for="clima">Seleccione el tipo de clima de hoy: </label>
-    <select id="clima">
-      <option value="">--Haga una elección--</option>
-      <option value="soleado">Soleado</option>
-      <option value="lluvioso">Lluvioso</option>
-      <option value="nevando">Nevando</option>
-      <option value="nublado">Nublado</option>
-    </select>
-    
-    <p></p>
+<body class="bg-gray-50">
+    <div class="container mx-auto px-4 py-8 max-w-5xl">
+        <!-- Header -->
+        <header class="mb-10 text-center">
+            <h1 class="text-3xl font-bold text-indigo-700 mb-2">
+                <i class="fas fa-network-wired mr-2"></i>Solver CPM
+            </h1>
+            <p class="text-gray-600">Herramienta para análisis de Ruta Crítica en Teoría de Redes</p>
+        </header>
 
-    <script src="./js/script.js"></script>
+        <!-- Description Section -->
+        <section class="mb-12 bg-white rounded-lg shadow-md p-6">
+            <h2 class="text-xl font-semibold text-indigo-600 mb-4">
+                <i class="fas fa-info-circle mr-2"></i>¿Qué es el método CPM?
+            </h2>
+            <div class="space-y-4 text-gray-700">
+                <p>El método de la Ruta Crítica (CPM - Critical Path Method) es una técnica de investigación de operaciones para planificar y gestionar proyectos complejos. Identifica:</p>
+                <ul class="list-disc pl-5 space-y-2">
+                    <li>La secuencia más larga de tareas dependientes (ruta crítica)</li>
+                    <li>El tiempo mínimo para completar el proyecto</li>
+                    <li>Las tareas que no pueden retrasarse sin afectar el plazo final</li>
+                </ul>
+            
+                <h3 class="font-semibold text-indigo-600 mt-4">
+                    <i class="fas fa-question-circle mr-2"></i>¿Cómo usar esta herramienta?
+                </h3>
+                <ol class="list-decimal pl-5 space-y-2">
+                    <li>Ingresa tus actividades en la tabla</li>
+                    <li>Especifica la duración de cada una</li>
+                    <li>Selecciona las actividades predecesoras</li>
+                    <li>Haz clic en "Calcular Ruta Crítica"</li>
+                </ol>
+                <p class="bg-blue-50 p-3 rounded border border-blue-200">
+                    <i class="fas fa-lightbulb mr-2 text-yellow-500"></i>
+                    <strong>Ejemplo sencillo:</strong> Para un proyecto con 3 actividades donde A (2 días) → B (3 días) → C (1 día), la ruta crítica sería A-B-C con duración total de 6 días.
+                </p>
+            </div>
+        </section>
+
+        <!-- Input Section -->
+        <section class="mb-12 bg-white rounded-lg shadow-md p-6">
+            <h2 class="text-xl font-semibold text-indigo-600 mb-4">
+                <i class="fas fa-edit mr-2"></i>Ingreso de Datos
+            </h2>
+            
+            <div class="overflow-x-auto mb-6">
+                <table class="min-w-full bg-white" id="activitiesTable">
+                    <thead>
+                        <tr class="bg-gray-100">
+                            <th class="py-2 px-4 border">Actividad</th>
+                            <th class="py-2 px-4 border">Duración (días)</th>
+                            <th class="py-2 px-4 border">Predecesoras</th>
+                            <th class="py-2 px-4 border">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Sample row -->
+                        <tr>
+                            <td class="border px-4 py-2">
+                                <input type="text" class="w-full p-1 border rounded activity-name" value="A" placeholder="Nombre">
+                            </td>
+                            <td class="border px-4 py-2">
+                                <input type="number" class="w-20 p-1 border rounded duration" value="2" min="1">
+                            </td>
+                            <td class="border px-4 py-2">
+                                <select class="w-full p-1 border rounded predecessors" multiple>
+                                    <option value="">Ninguna</option>
+                                </select>
+                            </td>
+                            <td class="border px-4 py-2 text-center">
+                                <button class="text-red-500 delete-row">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            
+            <div class="flex justify-between">
+                <button id="addRow" class="bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded">
+                    <i class="fas fa-plus mr-2"></i>Añadir Actividad
+                </button>
+                <button id="calculate" class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded font-medium">
+                    <i class="fas fa-calculator mr-2"></i>Calcular Ruta Crítica
+                </button>
+            </div>
+        </section>
+
+        <!-- Results Section -->
+        <section id="resultsSection" class="hidden bg-white rounded-lg shadow-md p-6 mb-12">
+            <h2 class="text-xl font-semibold text-indigo-600 mb-4">
+                <i class="fas fa-chart-bar mr-2"></i>Resultados
+            </h2>
+            
+            <div class="grid md:grid-cols-2 gap-6 mb-6">
+                <!-- Critical Path -->
+                <div class="bg-indigo-50 p-4 rounded-lg">
+                    <h3 class="font-medium text-indigo-700 mb-2">Ruta Crítica</h3>
+                    <div id="criticalPath" class="font-bold text-lg"></div>
+                    <div class="mt-2 text-sm text-gray-600">Tareas que determinan la duración mínima del proyecto</div>
+                </div>
+                
+                <!-- Project Duration -->
+                <div class="bg-green-50 p-4 rounded-lg">
+                    <h3 class="font-medium text-green-700 mb-2">Duración Total</h3>
+                    <div id="projectDuration" class="font-bold text-lg"></div>
+                    <div class="mt-2 text-sm text-gray-600">Tiempo mínimo para completar el proyecto</div>
+                </div>
+            </div>
+            
+            <!-- Gantt Chart -->
+            <div class="mb-6">
+                <h3 class="font-medium text-gray-700 mb-3">Diagrama de Gantt</h3>
+                <div class="h-64">
+                    <canvas id="ganttChart"></canvas>
+                </div>
+            </div>
+            
+            <!-- Detailed Results -->
+            <div class="overflow-x-auto">
+                <h3 class="font-medium text-gray-700 mb-3">Análisis Detallado</h3>
+                <table class="min-w-full bg-white border" id="resultsTable">
+                    <thead>
+                        <tr class="bg-gray-100">
+                            <th class="py-2 px-4 border">Actividad</th>
+                            <th class="py-2 px-4 border">ES</th>
+                            <th class="py-2 px-4 border">EF</th>
+                            <th class="py-2 px-4 border">LS</th>
+                            <th class="py-2 px-4 border">LF</th>
+                            <th class="py-2 px-4 border">Holgura</th>
+                            <th class="py-2 px-4 border">Crítica</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Results will be inserted here by JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Export Section -->
+        <section id="exportSection" class="hidden bg-white rounded-lg shadow-md p-6">
+            <h2 class="text-xl font-semibold text-indigo-600 mb-4">
+                <i class="fas fa-save mr-2"></i>Guardar Proyecto
+            </h2>
+            <div class="flex flex-col md:flex-row gap-4">
+                <button id="saveProject" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded">
+                    <i class="fas fa-save mr-2"></i>Guardar
+                </button>
+                <div class="flex-1">
+                    <select id="projectList" class="w-full p-2 border rounded">
+                        <option value="">Seleccionar proyecto...</option>
+                    </select>
+                </div>
+                <button id="loadProject" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">
+                    <i class="fas fa-folder-open mr-2"></i>Cargar
+                </button>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Variables globales
+            let activities = [];
+            let results = null;
+            let ganttChart = null;
+
+            // 1. Configurar eventos UI
+            document.getElementById('addRow').addEventListener('click', addActivityRow);
+            document.addEventListener('click', handleDeleteRow);
+            document.getElementById('calculate').addEventListener('click', calculateCriticalPath);
+            document.getElementById('saveProject').addEventListener('click', saveProject);
+            document.getElementById('loadProject').addEventListener('click', loadProject);
+
+            // 2. Funciones principales del CPM
+            function calculateCriticalPath() {
+                activities = collectActivityData();
+                
+                if (activities.length === 0) {
+                    alert("¡Agrega al menos una actividad!");
+                    return;
+                }
+
+                results = performCPMCalculations(activities);
+                displayResults(results);
+            }
+
+            function collectActivityData() {
+                const collected = [];
+                const rows = document.querySelectorAll('#activitiesTable tbody tr');
+                
+                rows.forEach(row => {
+                    const name = row.querySelector('.activity-name').value.trim();
+                    const duration = parseInt(row.querySelector('.duration').value) || 0;
+                    const predecessors = Array.from(row.querySelector('.predecessors').selectedOptions)
+                                            .map(opt => opt.value)
+                                            .filter(val => val);
+                    
+                    if (name && duration > 0) {
+                        collected.push({ name, duration, predecessors });
+                    }
+                });
+
+                return collected;
+            }
+
+            function performCPMCalculations(activities) {
+                // Paso 1: Inicialización
+                const activityMap = {};
+                activities.forEach(act => {
+                    activityMap[act.name] = {
+                        ...act,
+                        es: 0,  // Early Start
+                        ef: 0,  // Early Finish
+                        ls: Infinity,  // Late Start
+                        lf: Infinity,  // Late Finish
+                        successors: [],
+                        isCritical: false
+                    };
+                });
+
+                // Paso 2: Construir relaciones
+                activities.forEach(act => {
+                    act.predecessors.forEach(pred => {
+                        if (activityMap[pred]) {
+                            activityMap[pred].successors.push(act.name);
+                        }
+                    });
+                });
+
+                // Paso 3: Forward Pass (ES/EF)
+                const forwardPass = (activityName) => {
+                    const activity = activityMap[activityName];
+                    
+                    if (activity.predecessors.length === 0) {
+                        activity.es = 0;
+                    } else {
+                        activity.es = Math.max(...activity.predecessors.map(pred => activityMap[pred].ef));
+                    }
+                    
+                    activity.ef = activity.es + activity.duration;
+                    
+                    activity.successors.forEach(succ => {
+                        forwardPass(succ);
+                    });
+                };
+
+                activities.filter(act => act.predecessors.length === 0).forEach(act => {
+                    forwardPass(act.name);
+                });
+
+                // Paso 4: Backward Pass (LS/LF)
+                const backwardPass = (activityName) => {
+                    const activity = activityMap[activityName];
+                    
+                    if (activity.successors.length === 0) {
+                        activity.lf = activity.ef;
+                    } else {
+                        activity.lf = Math.min(...activity.successors.map(succ => activityMap[succ].ls));
+                    }
+                    
+                    activity.ls = activity.lf - activity.duration;
+                    
+                    activity.predecessors.forEach(pred => {
+                        backwardPass(pred);
+                    });
+                };
+
+                const endActivities = activities.filter(act => 
+                    activities.every(a => !a.predecessors.includes(act.name))
+                    .length > 0 
+                    ? activities.filter(act => activities.every(a => !a.predecessors.includes(act.name)))
+                    : [activities[activities.length - 1]];
+                
+                endActivities.forEach(act => {
+                    backwardPass(act.name);
+                });
+
+                // Paso 5: Calcular holguras y ruta crítica
+                let projectDuration = 0;
+                const criticalPath = [];
+                
+                activities.forEach(act => {
+                    const activity = activityMap[act.name];
+                    activity.slack = activity.ls - activity.es;
+                    activity.isCritical = activity.slack === 0;
+                    
+                    if (activity.isCritical) {
+                        criticalPath.push(activity.name);
+                    }
+                    
+                    projectDuration = Math.max(projectDuration, activity.ef);
+                });
+
+                criticalPath.sort((a, b) => activityMap[a].es - activityMap[b].es);
+
+                return {
+                    activities: activityMap,
+                    criticalPath,
+                    projectDuration
+                };
+            }
+
+            // 3. Funciones de visualización
+            function displayResults(results) {
+                // Mostrar ruta crítica y duración
+                document.getElementById('criticalPath').textContent = results.criticalPath.join(' → ');
+                document.getElementById('projectDuration').textContent = `${results.projectDuration} días`;
+                
+                // Tabla de resultados detallados
+                const resultsBody = document.querySelector('#resultsTable tbody');
+                resultsBody.innerHTML = '';
+                
+                Object.values(results.activities).forEach(act => {
+                    const row = document.createElement('tr');
+                    if (act.isCritical) row.classList.add('bg-red-50');
+                    
+                    row.innerHTML = `
+                        <td class="border px-4 py-2 font-medium">${act.name}</td>
+                        <td class="border px-4 py-2">${act.es}</td>
+                        <td class="border px-4 py-2">${act.ef}</td>
+                        <td class="border px-4 py-2">${act.ls}</td>
+                        <td class="border px-4 py-2">${act.lf}</td>
+                        <td class="border px-4 py-2">${act.slack}</td>
+                        <td class="border px-4 py-2 text-center">
+                            ${act.isCritical ? '<span class="text-red-600 font-bold">✓</span>' : ''}
+                        </td>
+                    `;
+                    resultsBody.appendChild(row);
+                });
+                
+                // Actualizar gráfico Gantt
+                updateGanttChart(results);
+                
+                // Mostrar sección de resultados
+                document.getElementById('resultsSection').classList.remove('hidden');
+                document.getElementById('exportSection').classList.remove('hidden');
+            }
+
+            function updateGanttChart(results) {
+                const ctx = document.getElementById('ganttChart').getContext('2d');
+                const activities = Object.values(results.activities).sort((a, b) => a.es - b.es);
+                
+                if (ganttChart) {
+                    ganttChart.destroy();
+                }
+                
+                ganttChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: activities.map(a => a.name),
+                        datasets: [{
+                            label: 'Inicio Temprano',
+                            data: activities.map(a => a.es),
+                            backgroundColor: 'rgba(209, 213, 219, 0.7)',
+                            borderColor: 'rgba(156, 163, 175, 1)',
+                            borderWidth: 1
+                        }, {
+                            label: 'Duración',
+                            data: activities.map(a => a.duration),
+                            backgroundColor: activities.map(a => 
+                                a.isCritical ? 'rgba(220, 38, 38, 0.7)' : 'rgba(79, 70, 229, 0.7)'),
+                            borderColor: activities.map(a => 
+                                a.isCritical ? 'rgba(220, 38, 38, 1)' : 'rgba(79, 70, 229, 1)'),
+                            borderWidth: 1
+                        }]
+                    },
+                    options: getChartOptions(results)
+                });
+            }
+
+            function getChartOptions(results) {
+                return {
+                    responsive: true,
+                    indexAxis: 'y',
+                    scales: {
+                        x: {
+                            stacked: true,
+                            title: { display: true, text: 'Días' },
+                            max: results.projectDuration
+                        },
+                        y: { stacked: true }
+                    },
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const act = results.activities[context.label];
+                                    if (context.datasetIndex === 0) {
+                                        return `Inicio: ${act.es}, Fin: ${act.ef}`;
+                                    } else {
+                                        return `Duración: ${act.duration} días | Holgura: ${act.slack}`;
+                                    }
+                                }
+                            }
+                        },
+                        legend: { position: 'bottom' }
+                    }
+                };
+            }
+
+           // 4. Funciones de gestión de datos
+            function addActivityRow() {
+                const tbody = document.querySelector('#activitiesTable tbody');
+                const nextId = tbody.children.length + 1;
+                const nextChar = String.fromCharCode(64 + nextId);
+                
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td class="border px-4 py-2">
+                        <input type="text" class="w-full p-1 border rounded activity-name" 
+                               value="${nextChar}" placeholder="Nombre" required>
+                    </td>
+                    <td class="border px-4 py-2">
+                        <input type="number" class="w-20 p-1 border rounded duration" 
+                               min="1" value="1" required>
+                    </td>
+                    <td class="border px-4 py-2">
+                        <select class="w-full p-1 border rounded predecessors" multiple>
+                            <option value="">Ninguna</option>
+                            ${generatePredecessorOptions(nextId)}
+                        </select>
+                    </td>
+                    <td class="border px-4 py-2 text-center">
+                        <button class="text-red-500 delete-row">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                `;
+                
+                tbody.appendChild(row);
+            }
+
+            function generatePredecessorOptions(currentIndex) {
+                const options = [];
+                const rows = document.querySelectorAll('#activitiesTable tbody tr');
+                
+                rows.forEach((row, idx) => {
+                    if (idx < currentIndex - 1) {
+                        const name = row.querySelector('.activity-name').value;
+                        options.push(`<option value="${name}">${name}</option>`);
+                    }
+                });
+                
+                return options.join('');
+            }
+
+            function handleDeleteRow(e) {
+                if (e.target.classList.contains('delete-row') || e.target.closest('.delete-row')) {
+                    const row = e.target.closest('tr');
+                    row.remove();
+                    updatePredecessorOptions();
+                }
+            }
+
+            function updatePredecessorOptions() {
+                const rows = document.querySelectorAll('#activitiesTable tbody tr');
+                
+                rows.forEach((row, index) => {
+                    const select = row.querySelector('.predecessors');
+                    const currentName = row.querySelector('.activity-name').value;
+                    const selected = Array.from(select.selectedOptions).map(opt => opt.value);
+                    
+                    select.innerHTML = '<option value="">Ninguna</option>';
+                    
+                    rows.forEach((r, idx) => {
+                        if (idx < index) {
+                            const name = r.querySelector('.activity-name').value;
+                            const isSelected = selected.includes(name);
+                            select.innerHTML += `<option value="${name}" ${isSelected ? 'selected' : ''}>${name}</option>`;
+                        }
+                    });
+                });
+            }
+
+            // 5. Funciones de persistencia (localStorage)
+            function saveProject() {
+                if (!results) {
+                    alert("Primero calcula la ruta crítica para guardar el proyecto");
+                    return;
+                }
+                
+                const projectName = prompt("Nombre del proyecto:");
+                if (!projectName) return;
+                
+                const projectData = {
+                    activities,
+                    results,
+                    timestamp: new Date().toISOString()
+                };
+                
+                localStorage.setItem(`cpmProject_${projectName}`, JSON.stringify(projectData));
+                alert(`Proyecto "${projectName}" guardado correctamente`);
+                updateProjectList();
+            }
+
+            function loadProject() {
+                const projectName = document.getElementById('projectList').value;
+                if (!projectName) return;
+                
+                const projectData = JSON.parse(localStorage.getItem(`cpmProject_${projectName}`));
+                if (!projectData) {
+                    alert("Proyecto no encontrado");
+                    return;
+                }
+                
+                // Restaurar datos
+                activities = projectData.activities;
+                results = projectData.results;
+                
+                // Reconstruir tabla
+                const tbody = document.querySelector('#activitiesTable tbody');
+                tbody.innerHTML = '';
+                
+                activities.forEach(act => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td class="border px-4 py-2">
+                            <input type="text" class="w-full p-1 border rounded activity-name" 
+                                   value="${act.name}" placeholder="Nombre" required>
+                        </td>
+                        <td class="border px-4 py-2">
+                            <input type="number" class="w-20 p-1 border rounded duration" 
+                                   min="1" value="${act.duration}" required>
+                        </td>
+                        <td class="border px-4 py-2">
+                            <select class="w-full p-1 border rounded predecessors" multiple>
+                                <option value="">Ninguna</option>
+                                ${activities.filter(a => a.name !== act.name).map(a => 
+                                    `<option value="${a.name}" ${act.predecessors.includes(a.name) ? 'selected' : ''}>
+                                        ${a.name}
+                                    </option>`
+                                ).join('')}
+                            </select>
+                        </td>
+                        <td class="border px-4 py-2 text-center">
+                            <button class="text-red-500 delete-row">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    `;
+                    tbody.appendChild(row);
+                });
+                
+                // Mostrar resultados
+                displayResults(results);
+            }
+
+            function updateProjectList() {
+                const select = document.getElementById('projectList');
+                select.innerHTML = '<option value="">Seleccionar proyecto...</option>';
+                
+                for (let i = 0; i < localStorage.length; i++) {
+                    const key = localStorage.key(i);
+                    if (key.startsWith('cpmProject_')) {
+                        const projectName = key.replace('cpmProject_', '');
+                        select.innerHTML += `<option value="${projectName}">${projectName}</option>`;
+                    }
+                }
+            }
+
+            // Inicialización
+            updateProjectList();
+            addActivityRow(); // Añadir primera fila por defecto
+        });
+    </script>
 </body>
 </html>
