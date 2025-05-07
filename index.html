@@ -412,50 +412,56 @@
             }
 
            // 4. Funciones de gestión de datos
-            function addActivityRow() {
-                const tbody = document.querySelector('#activitiesTable tbody');
-                const nextId = tbody.children.length + 1;
-                const nextChar = String.fromCharCode(64 + nextId);
-                
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td class="border px-4 py-2">
-                        <input type="text" class="w-full p-1 border rounded activity-name" 
-                               value="${nextChar}" placeholder="Nombre" required>
-                    </td>
-                    <td class="border px-4 py-2">
-                        <input type="number" class="w-20 p-1 border rounded duration" 
-                               min="1" value="1" required>
-                    </td>
-                    <td class="border px-4 py-2">
-                        <select class="w-full p-1 border rounded predecessors" multiple>
-                            <option value="">Ninguna</option>
-                            ${generatePredecessorOptions(nextId)}
-                        </select>
-                    </td>
-                    <td class="border px-4 py-2 text-center">
-                        <button class="text-red-500 delete-row">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </td>
-                `;
-                
-                tbody.appendChild(row);
-            }
+         function addActivityRow() {
+    const tbody = document.querySelector('#activitiesTable tbody');
+    const nextId = tbody.children.length + 1;
+    const nextChar = String.fromCharCode(64 + nextId);
+    
+    const row = document.createElement('tr');
+    row.innerHTML = `
+        <td class="border px-4 py-2">
+            <input type="text" class="w-full p-1 border rounded activity-name" 
+                   value="${nextChar}" placeholder="Nombre" required>
+        </td>
+        <td class="border px-4 py-2">
+            <input type="number" class="w-20 p-1 border rounded duration" 
+                   min="1" value="1" required>
+        </td>
+        <td class="border px-4 py-2">
+            <select class="w-full p-1 border rounded predecessors" multiple>
+                <option value="">Ninguna</option>
+                ${generatePredecessorOptions(nextId)}
+            </select>
+        </td>
+        <td class="border px-4 py-2 text-center">
+            <button class="text-red-500 delete-row">
+                <i class="fas fa-trash"></i>
+            </button>
+        </td>
+    `;
+    
+    tbody.appendChild(row);
+    
+    // Actualizar los selectores de todas las filas
+    updatePredecessorOptions();
+}
 
             function generatePredecessorOptions(currentIndex) {
-                const options = [];
-                const rows = document.querySelectorAll('#activitiesTable tbody tr');
-                
-                rows.forEach((row, idx) => {
-                    if (idx < currentIndex - 1) {
-                        const name = row.querySelector('.activity-name').value;
-                        options.push(`<option value="${name}">${name}</option>`);
-                    }
-                });
-                
-                return options.join('');
+    const options = [];
+    const rows = document.querySelectorAll('#activitiesTable tbody tr');
+    
+    rows.forEach((row, idx) => {
+        const nameInput = row.querySelector('.activity-name');
+        if (nameInput && idx < currentIndex - 1) {
+            const name = nameInput.value;
+            if (name) {  // Solo agregar si tiene nombre
+                options.push(`<option value="${name}">${name}</option>`);
             }
+        }
+    });
+    
+    return options.join('');
+}
 
             function handleDeleteRow(e) {
                 if (e.target.classList.contains('delete-row') || e.target.closest('.delete-row')) {
