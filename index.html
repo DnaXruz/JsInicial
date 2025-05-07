@@ -169,9 +169,244 @@
             </div>
         </section>
     </div>
+    
+<script>
+    // CPM Solver - JavaScript Completo Corregido
+    document.addEventListener('DOMContentLoaded', function () {
+        // Variables globales
+        let activities = [];
+        let results = null;
+        let ganttChart = null;
 
-    <script>
-        
-    </script>
+        // 1. Configurar eventos UI
+        document.getElementById('addRow').addEventListener('click', addActivityRow);
+        document.addEventListener('click', handleDeleteRow);
+        document.getElementById('calculate').addEventListener('click', calculateCriticalPath);
+
+        // 2. Funciones principales del CPM
+        function calculateCriticalPath() {
+            activities = collectActivityData();
+
+            if (activities.length === 0) {
+                alert("¡Agrega al menos una actividad!");
+                return;
+            }
+
+            results = performCPMCalculations(activities);
+            displayResults(results);
+        }
+
+        function collectActivityData() {
+            const collected = [];
+            const rows = document.querySelectorAll('#activitiesTable tbody tr');
+
+            rows.forEach(row => {
+                const name = row.querySelector('.activity-name').value.trim();
+                const duration = parseInt(row.querySelector('.duration').value) || 0;
+                const predecessors = Array.from(row.querySelector('.predecessors').selectedOptions)
+                    .map(opt => opt.value)
+                    .filter(val => val);
+
+                if (name && duration > 0) {
+                    collected.push({ name, duration, predecessors });
+                }
+            });
+
+            return collected;
+        }
+
+        function performCPMCalculations(activities) {
+            // Paso 1: Inicialización
+            const activityMap = {};
+            activities.forEach(act => {
+                activityMap[act.name] = {
+                    ...act,
+                    es: 0,  // Early Start
+                    ef: 0,  // Early Finish
+                    ls: Infinity,  // Late Start
+                    lf: Infinity,  // Late Finish
+                    successors: [],
+                    isCritical: false
+                };
+            });
+
+            // Paso 2: Construir relaciones
+            activities.forEach(act => {
+                act.predecessors.forEach(pred => {
+                    if (activityMap[pred]) {
+                        activityMap[pred].successors.push(act.name);
+                    }
+                });
+            });
+
+            // Paso 3: Forward Pass (ES/EF)
+            const forwardPass = (activityName) => {
+                const activity = activityMap[activityName];
+
+                if (activity.predecessors.length === 0) {
+                    activity.es = 0;
+                } else {
+                    activity.es = Math.max(...activity.predecessors.map(pred => activityMap[pred].ef));
+                }
+
+                activity.ef = activity.es + activity.duration;
+
+                activity.successors.forEach(succ => {
+                    forwardPass(succ);
+                });
+            };
+
+            activities.filter(act => act.predecessors.length === 0).forEach(act => {
+                forwardPass(act.name);
+            });
+
+            // Paso 4: Backward Pass (LS/LF)
+            const backwardPass = (activityName) => {
+                const activity = activityMap[activityName];
+
+                if (activity.successors.length === 0) {
+                    activity.lf = activity.ef;
+                } else {
+                    activity.lf = Math.min(...activity.successors.map(succ => activityMap[succ].ls));
+                }
+
+                activity.ls = activity.lf - activity.duration;
+
+                activity.predecessors.forEach(pred => {
+                    backwardPass(pred);
+                });
+            };
+
+            const endActivities = activities.filter(act =>
+                activities.every(a => !a.predecessors.includes(act.name))
+            );
+
+            endActivities.forEach(act => {
+                backwardPass(act.name);
+            });
+
+            // Paso 5: Calcular holguras y ruta crítica
+            let projectDuration = 0;
+            const criticalPath = [];
+
+            activities.forEach(act => {
+                const activity = activityMap[act.name];
+                activity.slack = activity.ls - activity.es;
+                activity.isCritical = activity.slack === 0;
+                if (activity.isCritical) {
+                    criticalPath.push(activity.name);
+                }
+
+                projectDuration = Math.max(projectDuration, activity.ef);
+            });
+
+            criticalPath.sort((a, b) => activityMap[a].es - activityMap[b].es);
+
+            return {
+                activities: activityMap,
+                criticalPath,
+                projectDuration
+            };
+        }
+
+        // 3. Funciones de visualización
+        function displayResults(results) {
+            // Mostrar ruta crítica y duración
+            document.getElementById('criticalPath').textContent = results.criticalPath.join(' → ');
+            document.getElementById('projectDuration').textContent = `${results.projectDuration} días`;
+
+            // Tabla de resultados detallados
+            const resultsBody = document.querySelector('#resultsTable tbody');
+            resultsBody.innerHTML = '';
+
+            Object.values(results.activities).forEach(act => {
+                const row = document.createElement('tr');
+                if (act.isCritical) row.classList.add('bg-red-50');
+
+                row.innerHTML = `
+                    <td class="border px-4 py-2 font-medium">${act.name}</td>
+                    <td class="border px-4 py-2">${act.es}</td>
+                    <td class="border px-4 py-2">${act.ef}</td>
+                    <td class="border px-4 py-2">${act.ls}</td>
+                    <td class="border px-4 py-2">${act.lf}</td>
+                    <td class="border px-4 py-2">${act.slack}</td>
+                    <td class="border px-4 py-2 text-center">
+                        ${act.isCritical ? '<span class="text-red-600 font-bold">✓</span>' : ''}
+                    </td>
+                `;
+                resultsBody.appendChild(row);
+            });
+
+            // Mostrar sección de resultados
+            document.getElementById('resultsSection').classList.remove('hidden');
+        }
+
+        // 4. Funciones de gestión de datos
+        function addActivityRow() {
+            const tbody = document.querySelector('#activitiesTable tbody');
+            const rows = tbody.querySelectorAll('tr');
+            const nextChar = String.fromCharCode(65 + rows.length);
+
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td class="border px-4 py-2">
+                    <input type="text" class="w-full p-1 border rounded activity-name" 
+                           value="${nextChar}" placeholder="Nombre" required>
+                </td>
+                <td class="border px-4 py-2">
+                    <input type="number" class="w-20 p-1 border rounded duration" 
+                           min="1" value="1" required>
+                </td>
+                <td class="border px-4 py-2">
+                    <select class="w-full p-1 border rounded predecessors" multiple>
+                        <option value="">Ninguna</option>
+                    </select>
+                </td>
+                <td class="border px-4 py-2 text-center">
+                    <button class="text-red-500 delete-row">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            `;
+
+            tbody.appendChild(row);
+            updatePredecessorOptions();
+        }
+
+        function updatePredecessorOptions() {
+            const rows = document.querySelectorAll('#activitiesTable tbody tr');
+            const activities = Array.from(rows).map(row => {
+                return {
+                    name: row.querySelector('.activity-name').value,
+                    element: row
+                };
+            });
+
+            activities.forEach((currentAct, index) => {
+                const select = currentAct.element.querySelector('.predecessors');
+                if (!select) return;
+
+                const selected = Array.from(select.selectedOptions).map(opt => opt.value);
+                select.innerHTML = '<option value="">Ninguna</option>';
+
+                activities.forEach((act, idx) => {
+                    if (idx < index && act.name) {
+                        const isSelected = selected.includes(act.name);
+                        select.innerHTML += `<option value="${act.name}" ${isSelected ? 'selected' : ''}>${act.name}</option>`;
+                    }
+                });
+            });
+        }
+
+        function handleDeleteRow(e) {
+            if (e.target.classList.contains('delete-row') || e.target.closest('.delete-row')) {
+                const row = e.target.closest('tr');
+                row.remove();
+                updatePredecessorOptions();
+            }
+        }
+    });
+</script>
+
 </body>
 </html>
