@@ -337,8 +337,49 @@
                 resultsBody.appendChild(row);
             });
 
+            renderGanttChart(results);
+
             // Mostrar sección de resultados
             document.getElementById('resultsSection').classList.remove('hidden');
+        }
+
+        function renderGanttChart(results) {
+            const ctx = document.getElementById('ganttChart').getContext('2d');
+
+            if (ganttChart) {
+                ganttChart.destroy(); // Destruir gráfico existente si ya lo hay
+            }
+
+            const labels = results.criticalPath; // Etiquetas de las actividades críticas
+            const data = results.criticalPath.map(activityName => {
+                const act = results.activities[activityName];
+                return {
+                    x: [act.es, act.ef], // Intervalo de tiempo (inicio, fin)
+                    y: activityName,     // Nombre de la actividad
+                };
+            });
+
+            ganttChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Duración',
+                        data: data.map(d => d.x[1] - d.x[0]), // Duración de cada actividad
+                        backgroundColor: 'rgba(75, 192, 192, 0.5)',
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        borderWidth: 1,
+                    }]
+                },
+                options: {
+                    indexAxis: 'y', // Gráfico horizontal
+                    scales: {
+                        x: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
         }
 
         // 4. Funciones de gestión de datos
